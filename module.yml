@@ -1,0 +1,97 @@
+---
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'cfn-modules: AWS Secrets Manager secret'
+# cfn-modules:implements(ExposeArn)
+Parameters:
+  KmsKeyModule:
+    Description: 'Optional but recommended stack name of kms-key module.'
+    Type: String
+    Default: ''
+  Name:
+    Description: 'Optional name of the secret.'
+    Type: String
+    Default: ''
+  Description:
+    Description: 'Optional description of the secret.'
+    Type: String
+    Default: ''
+  CharactersToExclude:
+    Description: 'Optional characters not to be used when generating the initial value.'
+    Type: String
+    Default: '"@/\'
+  ExcludeLowercase:
+    Description: 'Optionally specifies that the generated password should not include lowercase letters.'
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+  ExcludeNumbers:
+    Description: 'Optionally specifies that the generated password should not include digits.'
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+  ExcludePunctuation:
+    Description: 'Optionally specifies that the generated password should not include punctuation characters.'
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+  ExcludeUppercase:
+    Description: 'Optionally specifies that the generated password should not include uppercase letters.'
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+  IncludeSpace:
+    Description: 'Optionally specifies that the generated password should not include the space character.'
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+  RequireEachIncludedType:
+    Description: 'Optionally specifies whether the generated password must include at least one of every allowed character type.'
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'true'
+  PasswordLength:
+    Description: 'Optional length of the generated password'
+    Type: Number
+    Default: 30
+Conditions:
+  HasKmsKeyModule: !Not [!Equals [!Ref KmsKeyModule, '']]
+  HasName: !Not [!Equals [!Ref Name, '']]
+  HasDescription: !Not [!Equals [!Ref Description, '']]
+Resources:
+  Secret:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      KmsKeyId: !If [HasKmsKeyModule, {'Fn::ImportValue': !Sub '${KmsKeyModule}-Arn'}, !Ref 'AWS::NoValue']
+      Name: !If [HasName, !Ref 'Name', !Ref 'AWS::NoValue']
+      Description: !If [HasDescription, !Ref 'Description', !Ref 'AWS::NoValue']
+      GenerateSecretString:
+        PasswordLength: !Ref PasswordLength
+        ExcludeCharacters: !Ref 'CharactersToExclude'
+        ExcludeLowercase: !Ref 'ExcludeLowercase'
+        ExcludeNumbers: !Ref 'ExcludeNumbers'
+        ExcludePunctuation: !Ref 'ExcludePunctuation'
+        ExcludeUppercase: !Ref 'ExcludeUppercase'
+        IncludeSpace: !Ref 'IncludeSpace'
+        RequireEachIncludedType: !Ref 'RequireEachIncludedType'
+Outputs:
+  ModuleId:
+    Value: 'secret'
+  ModuleVersion:
+    Value: '1.2.0'
+  StackName:
+    Value: !Ref 'AWS::StackName'
+  Arn:
+    Value: !Ref 'Secret'
+    Export:
+      Name: !Sub '${AWS::StackName}-Arn'
